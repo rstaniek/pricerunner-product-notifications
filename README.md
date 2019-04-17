@@ -48,6 +48,10 @@ The script itself executes as either a time restricted job or in continuous mode
 
 :zap:`python ./pricerunner-price-service.py -i 5 --indefinite --product_id "<id param>" --url_name "<url name param>"`
 
+### Fully working example
+
+:zap:`python ./pricerunner-price-service.py -i 0.02 -l 0.4 --product_id "1-4676650" --url_name "Apple-iPhone-XR-64GB-Sammenlign-Priser"`
+
 ## Command line argumets
 
 In this section, there are listed all the currently supported start cmd arguments:
