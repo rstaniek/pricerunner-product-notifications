@@ -16,13 +16,20 @@ class ConfigManager():
         super().__init__(*args, **kwargs)
 
     def _load(self):
-        with open(ConfigManager.FILE, 'r') as f:
-            cfg = json.load(f)
-            self.cfg = cfg
+        try:
+            with open(ConfigManager.FILE, 'r') as f:
+                cfg = json.load(f)
+                self.cfg = cfg
+        except:
+            print('An error occured while loading the script config file [{}]. It either does not exist or is locked by another process. Do something about this!'.format(ConfigManager.FILE))
+            sys.exit(2)
     
     def _update_config(self):
         with open(ConfigManager.FILE, 'w') as f:
             json.dump(self.cfg, f, indent=4)
+
+    def as_string(self):
+        return json.dumps(self.cfg, indent=4)
 
     def get_gmail_cfg(self):
         return self.cfg['gmail']
@@ -241,6 +248,7 @@ def print_help():
             '\t--indefinite\t\tNote: Use when the program shall never halt\n'
         'ADDITIONAL OPERATIONS:\n'
             '\t-r | --receiver <email>\tType: String\texample: example@email.com\tNote: sets the receiver to the selected one, use white space for not having any receiver at all\n'
+            '\t--cfg\tNote: Display current configuration\n'
             '\t--bcc\tNote: Used for editing BCC recipents\n'
                 '\t\t--add <bcc>\tType: String\texample: example@email.com\tNote: adds an extra bcc recipent. Works with --bcc\n'
                 '\t\t--del <bcc>\tType: String\texample: example@email.com\tNote: deletes existing bcc from the list. Works with --bcc\n')
@@ -257,8 +265,9 @@ def main(args):
     str_del = None
     str_receiver = None
     job_indefinite = False
+    show_cfg = False
     try:
-        opts, args = getopt.getopt(args, "?hi:l:u:r:", ['interval=', 'job_length=', 'url=', 'product_id=', 'url_name=', 'bcc', 'add=', 'del=', 'receiver=', 'indefinite'])
+        opts, args = getopt.getopt(args, "?hi:l:u:r:", ['interval=', 'job_length=', 'url=', 'product_id=', 'url_name=', 'bcc', 'add=', 'del=', 'receiver=', 'indefinite', 'cfg'])
     except getopt.GetoptError:
         print_help()
         sys.exit(2)
@@ -294,6 +303,8 @@ def main(args):
             str_receiver = str(arg)
         elif opt == '--indefinite':
             job_indefinite = True
+        elif opt == '--cfg':
+            show_cfg = True
     if bcc_operation:
         cfg = ConfigManager()
         if str_add is not None:
@@ -306,6 +317,9 @@ def main(args):
     elif str_receiver is not None:
         cfg = ConfigManager()
         cfg.set_mail_receiver(str_receiver)
+        sys.exit(0)
+    elif show_cfg:
+        print(ConfigManager().as_string())
         sys.exit(0)
 
 
