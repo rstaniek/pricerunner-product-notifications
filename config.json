@@ -1,0 +1,16 @@
+{
+    "gmail": {
+        "smtp_server": "smtp.gmail.com",
+        "port": 587,
+        "email_addr": "SENDER EMAIL ADDRESS HERE",
+        "password": "SUPER SECRET PASSWORD1",
+        "template": {
+            "_default": "Subject: {subject}\n\n\n{message}\n\n\tThis message was generated with Python.",
+            "_html": "<html> <body> <h1>Cheaper provider found!</h1> <p>A cheaper provider has been found for: <b>{product_name}</b></p><h2 style=\"color:red;\">New price: {price} {currency}</h2> <p>Click <a href=\"{full_url}\">HERE</a> to visit the shop site.</p><p>Retailer: {retailer_name}<br/> Estimated delivery: {delivery}<br/> SafeBuy customer protection: {safe_buy}</p></body></html>"
+        }
+    },
+    "program": {
+        "receiver": "",
+        "notif_bcc": []
+    }
+}
