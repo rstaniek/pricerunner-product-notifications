@@ -1,5 +1,5 @@
 
-import requests, json, datetime, sys, getopt, smtplib, ssl, email, os.path
+import requests, json, datetime, sys, getopt, smtplib, ssl, email, os.path, datetime
 from time import sleep
 from apscheduler.schedulers.background import BackgroundScheduler
 from email import encoders
@@ -77,7 +77,8 @@ class EmailBuilder():
 
     def withBcc(self, bcc):
         if bcc is not None and len(bcc) != 0:
-            self.message['Bcc'] = bcc
+            cc_str = ', '.join(['<{}>'.format(x) for x in bcc])
+            self.message['Bcc'] = cc_str
         return self
 
     def withBody(self, message, mime_type = 'plain'):
@@ -86,7 +87,7 @@ class EmailBuilder():
 
     def withAttachment(self, filename):
         if os.path.exists(filename):
-            with open(filename, 'r') as file:
+            with open(filename, 'rb') as file:
                 part = MIMEBase("application", "octet-stream")
                 part.set_payload(file.read())
             encoders.encode_base64(part)
@@ -98,21 +99,26 @@ class EmailBuilder():
             return self
     
     def build(self):
+        print('built message: \n{}\n'.format(self.message.as_string()))
         return self.message.as_string()
 
 class GmailHandler():
     def __init__(self, receiver_addr = None, *args, **kwargs):
         self.receiver = receiver_addr
         self.cfg = ConfigManager().get_gmail_cfg()
-        context = ssl.create_default_context()
+        self.server = smtplib.SMTP(self.cfg['smtp_server'], self.cfg['port'])
+        self._connect()
+        super().__init__(*args, **kwargs)
+
+    def _connect(self):
         try:
+            context = ssl.create_default_context()
             self.server = smtplib.SMTP(self.cfg['smtp_server'], self.cfg['port'])
             self.server.ehlo()
             self.server.starttls(context=context)
             self.server.ehlo()
         except Exception as e:
             print(e)
-        super().__init__(*args, **kwargs)
 
     def _chck_addr(self, receiver_addr):
         addr = receiver_addr if receiver_addr is not None else self.receiver
@@ -123,6 +129,7 @@ class GmailHandler():
         return addr
 
     def send_plain(self, subject, msg, receiver_addr = None):
+        self._connect()
         addr = self._chck_addr(receiver_addr)
         message = self.cfg['template']['_default']
         message = message.format(subject=subject, message=msg)
@@ -137,6 +144,7 @@ class GmailHandler():
             self.server.quit()
 
     def send(self, msg, receiver_addr = None):
+        self._connect()
         addr = self._chck_addr(receiver_addr)
         print('Sending notification to {}'.format(addr))
         try:
@@ -190,6 +198,7 @@ class Program():
             self.url = Program.URL_PATH.format(Program.PRODUCT_ID, Program.URL_NAME)
         self.cfg = ConfigManager().get_program_cfg()
         self.mail_client = GmailHandler(self.cfg['receiver'])
+        self.infinite_job = False
         super().__init__(*args, *kwargs)
 
     def get_avail_offers(self):
@@ -211,7 +220,7 @@ class Program():
 
     def send_notification(self):
         sender = ConfigManager().get_gmail_cfg()['email_addr']
-        msg_from_template = ConfigManager().get_gmail_cfg()['template']['_html']
+        msg_from_template = ConfigManager().get_gmail_cfg()['template']['_html_cheper_product_notif']
         msg_from_template = msg_from_template.format(
             product_name=self.current_cheapest.productName, 
             price=self.current_cheapest.price, 
@@ -220,20 +229,40 @@ class Program():
             delivery=self.current_cheapest.delivery, 
             retailer_name=self.current_cheapest.retailerName,
             safe_buy= 'YES' if self.current_cheapest.safeBuy else 'NO')
-        print('Message payload to be sent: {}'.format(msg_from_template))
         msg = EmailBuilder(receiver=self.cfg['receiver'], sender=sender).withSubject('New offer found!').withBody(msg_from_template, EmailBuilder.HTML).withBcc(self.cfg['notif_bcc']).build()
         self.mail_client.send(msg)
 
+    def send_job_terminated_notif(self):
+        if self.cfg['receiver'] is not None and self.cfg['receiver'] != '' and self.cfg['receiver'] != ' ':
+            sender = ConfigManager().get_gmail_cfg()['email_addr']
+            msg_from_template = ConfigManager().get_gmail_cfg()['template']['_html_job_terminated_notif']
+            msg_from_template = msg_from_template.format(
+                product_name=self.current_cheapest.productName,
+                price=self.current_cheapest.price, 
+                currency=self.current_cheapest.currency,
+                retailer_name=self.current_cheapest.retailerName,
+                timestamp=datetime.datetime.now())
+            msg = EmailBuilder(receiver=self.cfg['receiver'], sender=sender).withSubject('Pricerunner job finished!').withBody(msg_from_template, EmailBuilder.HTML).build()
+            self.mail_client.send(msg)
+        else:
+            print('\tNo receiver specified, aborting notification!!')
+
     def run(self, job_length_minutes, is_indefinite = False):
-        sched = BackgroundScheduler()
-        sched.add_job(self.update_cheapest, 'interval', minutes = self.interval)
-        sched.start()
+        self.infinite_job = is_indefinite
         if is_indefinite == False:
+            sched = BackgroundScheduler()
+            sched.add_job(self.update_cheapest, 'interval', minutes = self.interval)
+            sched.start()
             try:
                 print('Setting up a job for {} minutes'.format(job_length_minutes))
                 sleep(job_length_minutes * 60)
             finally:
                 sched.shutdown()
+                self.send_job_terminated_notif()
+        else:
+            while True:
+                sleep(self.interval * 60)
+                self.update_cheapest()
 
 def print_help():
     text = ('pricerunner-price-service.py\n'
