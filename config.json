@@ -12,6 +12,10 @@
     },
     "program": {
         "receiver": "",
-        "notif_bcc": []
+        "notif_bcc": [],
+        "default_product": {
+            "url": "",
+            "id": ""
+        }
     }
 }

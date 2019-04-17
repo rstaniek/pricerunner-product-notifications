@@ -61,6 +61,15 @@ class ConfigManager():
         print('Receiver changed!')
         return True
 
+    def update_default_product(self, id_str, url):
+        self.cfg['program']['default_product']['id'] = id_str
+        self.cfg['program']['default_product']['url'] = url
+        print('Updating default product...')
+        self._update_config()
+        print('Default product updated')
+        return True
+
+
 class EmailBuilder():
     PLAIN = 'plain'
     HTML = 'html'
@@ -184,19 +193,16 @@ class ProductInfo():
     
 class Program():
     URL_PATH = 'https://www.pricerunner.dk/public/v3/pl/{}/dk?urlName={}&offer_sort=price&groupbyscope=true'
-    PRODUCT_ID = '543-3827489'
-    URL_NAME = 'Kamera-Objektiver/Tamron-SP-70-200mm-F-2.8-Di-VC-USD-G2-for-Nikon-Sammenlign-Priser'
 
-    def __init__(self, check_interval, url = None, product_id = None, url_name = None, *args, **kwargs):
+    def __init__(self, check_interval, product_id = None, url_name = None, *args, **kwargs):
         self.interval = check_interval
-        self.current_cheapest = ProductInfo(99999999.99, '', 0, '', '', '', '', False, '')
-        if url is not None:
-            self.url = url
-        elif product_id is not None and url_name is not None:
-            self.url = Program.URL_PATH.format(product_id, url_name)
-        else:
-            self.url = Program.URL_PATH.format(Program.PRODUCT_ID, Program.URL_NAME)
         self.cfg = ConfigManager().get_program_cfg()
+        self.current_cheapest = ProductInfo(99999999.99, '', 0, '', '', '', '', False, '')
+        if product_id is not None and url_name is not None:
+            self.url = Program.URL_PATH.format(product_id, url_name)
+            ConfigManager().update_default_product(product_id, url_name)
+        else:
+            self.url = Program.URL_PATH.format(self.cfg['default_product']['id'], self.cfg['default_product']['url'])       
         self.mail_client = GmailHandler(self.cfg['receiver'])
         self.infinite_job = False
         super().__init__(*args, *kwargs)
@@ -270,7 +276,6 @@ def print_help():
             '\t-i | --interval <interval>\tType: Float\texample: 5\n'
             '\t-l | --job_length <job lenght>\tType: Float\texample: 10\tNOTE! Might be replaced with --indefinite\n'
         'OPTIONAL ARGUMETS:\n'
-            '\tNOTE! Use either --url param OR a combination of --url_name AND --product_id!!!\n'
             '\t--url_name <query param>\tType: String\texample: "Kamera-Objektiver/Tamron-SP-70-200mm-F-2.8-Di-VC-USD-G2-for-Nikon-Sammenlign-Priser"\n'
             '\t--product_id <ID>\t\tType: String\texample: "543-3827489"\n'
             '\t--indefinite\t\tNote: Use when the program shall never halt\n'
