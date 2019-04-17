@@ -1,4 +1,3 @@
-
 import requests, json, datetime, sys, getopt, smtplib, ssl, email, os.path, datetime
 from time import sleep
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -13,7 +12,6 @@ class ConfigManager():
     def __init__(self, *args, **kwargs):
         self.cfg = None
         self._load()
-        super().__init__(*args, **kwargs)
 
     def _load(self):
         try:
@@ -78,7 +76,6 @@ class EmailBuilder():
         self.message = MIMEMultipart()
         self.message['From'] = sender
         self.message['To'] = receiver
-        super().__init__(*args, **kwargs)
 
     def withSubject(self, subject):
         self.message['Subject'] = subject
@@ -100,10 +97,7 @@ class EmailBuilder():
                 part = MIMEBase("application", "octet-stream")
                 part.set_payload(file.read())
             encoders.encode_base64(part)
-            part.add_header(
-                "Content-Disposition",
-                f"attachment; filename= {filename}",
-            )
+            part.add_header("Content-Disposition", "attachment; filename= {filename}")
             self.message.attach(part)
             return self
     
@@ -117,15 +111,11 @@ class GmailHandler():
         self.cfg = ConfigManager().get_gmail_cfg()
         self.server = smtplib.SMTP(self.cfg['smtp_server'], self.cfg['port'])
         self._connect()
-        super().__init__(*args, **kwargs)
 
     def _connect(self):
         try:
-            context = ssl.create_default_context()
             self.server = smtplib.SMTP(self.cfg['smtp_server'], self.cfg['port'])
-            self.server.ehlo()
-            self.server.starttls(context=context)
-            self.server.ehlo()
+            self.server.starttls()
         except Exception as e:
             print(e)
 
@@ -205,7 +195,6 @@ class Program():
             self.url = Program.URL_PATH.format(self.cfg['default_product']['id'], self.cfg['default_product']['url'])       
         self.mail_client = GmailHandler(self.cfg['receiver'])
         self.infinite_job = False
-        super().__init__(*args, *kwargs)
 
     def get_avail_offers(self):
         r = requests.get(self.url)
