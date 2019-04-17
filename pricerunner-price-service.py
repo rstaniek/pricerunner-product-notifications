@@ -271,7 +271,6 @@ def print_help():
             '\t-l | --job_length <job lenght>\tType: Float\texample: 10\tNOTE! Might be replaced with --indefinite\n'
         'OPTIONAL ARGUMETS:\n'
             '\tNOTE! Use either --url param OR a combination of --url_name AND --product_id!!!\n'
-            '\t-u | --url <url>\t\tType: String\texample: "https://www.pricerunner.dk/public/v3/pl/543-3827489/dk?urlName=Kamera-Objektiver/Tamron-SP-70-200mm-F-2.8-Di-VC-USD-G2-for-Nikon-Sammenlign-Priser&offer_sort=price&groupbyscope=true"\n'
             '\t--url_name <query param>\tType: String\texample: "Kamera-Objektiver/Tamron-SP-70-200mm-F-2.8-Di-VC-USD-G2-for-Nikon-Sammenlign-Priser"\n'
             '\t--product_id <ID>\t\tType: String\texample: "543-3827489"\n'
             '\t--indefinite\t\tNote: Use when the program shall never halt\n'
@@ -286,7 +285,6 @@ def print_help():
 def main(args):
     interval = None
     job_length = None
-    url = None
     url_name = None
     product_id = None
     bcc_operation = False
@@ -296,7 +294,7 @@ def main(args):
     job_indefinite = False
     show_cfg = False
     try:
-        opts, args = getopt.getopt(args, "?hi:l:u:r:", ['interval=', 'job_length=', 'url=', 'product_id=', 'url_name=', 'bcc', 'add=', 'del=', 'receiver=', 'indefinite', 'cfg'])
+        opts, args = getopt.getopt(args, "?hi:l:r:", ['interval=', 'job_length=', 'product_id=', 'url_name=', 'bcc', 'add=', 'del=', 'receiver=', 'indefinite', 'cfg'])
     except getopt.GetoptError:
         print_help()
         sys.exit(2)
@@ -316,8 +314,6 @@ def main(args):
             except:
                 print_help()
                 sys.exit(2)
-        elif opt in ('-u', '--url'):
-            url = str(arg)
         elif opt == '--product_id':
             product_id = str(arg)
         elif opt == '--url_name':
@@ -358,9 +354,7 @@ def main(args):
             print('Missing required arguments!!!')
             print_help()
             sys.exit(2)
-    if url is not None:   
-        p = Program(interval ,url=url)
-    elif url_name is not None and product_id is not None:
+    if url_name is not None and product_id is not None:
         p = Program(interval, url_name=url_name, product_id=product_id)
     else:
         p = Program(interval)
